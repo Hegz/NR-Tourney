@@ -21,6 +21,7 @@
 use strict;
 use warnings;
 use utf8;
+use v5.14;
 use YAML::XS qw(DumpFile);
 
 my $DEBUG = 0;
@@ -29,11 +30,11 @@ my $playerdata;
 # Load Players
 open (my $fh_players, "<", "Players.txt") or die "$!";
 chomp( my @players = <$fh_players>);
-print STDERR "Loaded " . scalar @players . " Players.\n" if $DEBUG;
+print STDERR "DEBUG: Loaded " . scalar @players . " Players.\n" if $DEBUG;
 
 # Add Bye if needed
 if (scalar @players % 2 == 1 ){
-	print STDERR "Adding BYE Player.\n" if $DEBUG;
+	print STDERR "DEBUG: Adding BYE Player.\n" if $DEBUG;
 	push @players, "BYE";
 }
 
@@ -43,6 +44,17 @@ for (@players) {
 }
 $spacer += 10;
 
+# Determine number of rounds 
+my $rounds;
+for (scalar @players) {
+	no warnings qw(experimental);
+	$rounds = 6 when $_ ge 33;
+	$rounds = 5 when $_ ge 17;
+	$rounds = 4 when $_ ge 9;
+	$rounds = 3 when $_ ge 5;
+	$rounds = 2 when $_ ge 2;
+}
+	print STDERR "DEBUG:" . $rounds . " rounds needed.\n" if $DEBUG;
 
 # Generate Pairings at random
 do {
@@ -52,15 +64,15 @@ do {
 
 	$playerdata->{$player1} = { 
 					opponents => [ $player2 ],
-					prestige => 0,
+					prestige => [(0,) x $rounds],
 				};
 
 	$playerdata->{$player2} = { 
 					opponents => [ $player1 ],
-					prestige => 0,
+					prestige => [(0,) x $rounds],
 				};
 
-	print STDERR scalar @players . " remaining.\n" if $DEBUG;
+	print STDERR "DEBUG:" . scalar @players . " remaining.\n" if $DEBUG;
 } while (scalar @players gt 0);
 
 DumpFile("playerdata.yml", $playerdata);
