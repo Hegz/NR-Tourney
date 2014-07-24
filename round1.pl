@@ -21,12 +21,14 @@
 use strict;
 use warnings;
 use utf8;
+use YAML::XS qw(DumpFile);
 
-my $DEBUG = 1;
+my $DEBUG = 0;
+my $playerdata;
 
 # Load Players
 open (my $fh_players, "<", "Players.txt") or die "$!";
-my @players = <$fh_players>;
+chomp( my @players = <$fh_players>);
 print STDERR "Loaded " . scalar @players . " Players.\n" if $DEBUG;
 
 # Add Bye if needed
@@ -35,6 +37,30 @@ if (scalar @players % 2 == 1 ){
 	push @players, "BYE";
 }
 
-# Generate Pairings
+my $spacer = 0;
+for (@players) {
+	$spacer = length if length > $spacer;
+}
+$spacer += 10;
 
 
+# Generate Pairings at random
+do {
+	my $player1 =  splice @players, int(rand(scalar @players)), 1;
+	my $player2 =  splice @players, int(rand(scalar @players)), 1;
+	print sprintf( "%-${spacer}s %-${spacer}s \n", $player1, $player2);
+
+	$playerdata->{$player1} = { 
+					opponents => [ $player2 ],
+					prestige => 0,
+				};
+
+	$playerdata->{$player2} = { 
+					opponents => [ $player1 ],
+					prestige => 0,
+				};
+
+	print STDERR scalar @players . " remaining.\n" if $DEBUG;
+} while (scalar @players gt 0);
+
+DumpFile("playerdata.yml", $playerdata);
