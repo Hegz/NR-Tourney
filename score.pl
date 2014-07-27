@@ -81,7 +81,7 @@ sub Score_Data {
 		prompt => 'Score which player?',
 		choices => \@sorted_players,
 	);
-	my $Player2 = $player_data->{$player_data->{$Player}->{opponents}[$score_round]};
+	my $Player2 = $player_data->{$Player}->{opponents}[$score_round];
 
 	print "Scoring game vs " . $Player2 . "\n"; 
 
