@@ -64,12 +64,12 @@ do {
 
 	$playerdata->{$player1} = { 
 					opponents => [ $player2 ],
-					prestige => [(0,) x $rounds],
+					prestige => [(undef,) x $rounds],
 				};
 
 	$playerdata->{$player2} = { 
 					opponents => [ $player1 ],
-					prestige => [(0,) x $rounds],
+					prestige => [(undef,) x $rounds],
 				};
 
 	print STDERR "DEBUG:" . scalar @players . " remaining.\n" if $DEBUG;
