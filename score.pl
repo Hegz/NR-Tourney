@@ -27,7 +27,9 @@ use Term::UI;
 use Term::ReadLine;
 use Getopt::Std;
 use Perl6::Form;
+use List::MoreUtils qw(firstidx);
 my $DEBUG = 0;
+
 # Set file name to work from
 my %opts;
 getopts('f:', \%opts);
@@ -94,37 +96,64 @@ sub sum{
 }
 
 sub Make_Pairing {
+	# Sort players based on total Prestige.
 	my @Players = sort {sum(@{$player_data->{$b}->{prestige}}) <=> sum(@{$player_data->{$a}->{prestige}})} keys $player_data;
+	if ($DEBUG) {
+		for my $i (0 .. $#Players) {
+			print STDERR "DEBUG: $i. " . $Players[$i] . "\n";
+		}
+	}
 	for my $i (0 .. $#Players) {
 		my $player = $Players[$i];
-		print "player: $player\n";
 		unless (defined $player_data->{$player}->{opponents}[$score_round]){
-			my $opponent = $i +1;
-			if ( defined $Players[$opponent] ) {
-				my $match = 1;
-				do {
-				print "Proposed Opponent: " . $Players[$opponent] . "\n";
+			print STDERR "DEBUG: $i " . $player . ".\n" if $DEBUG;
+			print STDERR "DEBUG:    previous opponents: @{$player_data->{$player}->{opponents}}\n" if $DEBUG;
+			my $opponent = $i;
+			my $nomatch = 0;
+			my $BYE;
+			do {
+				# Check next opponent in list to see if they are a valid pair
+				$opponent++;
+				$nomatch = 0;
+				if ( defined $Players[$opponent] ) {
+					print STDERR "DEBUG:   ->  checking $opponent " . $Players[$opponent] ."\n" if $DEBUG;
 					for (@{$player_data->{$player}->{opponents}}) {
-						print "Previous opponent: $_\n";
 						if ($_ eq $Players[$opponent]) {
-							$match = 0;
+							print STDERR "DEBUG:    -> $_ Not a valid match.\n" if $DEBUG;
+							# Fail this pair up.
+							$nomatch = 1;
 						}
 					}
-					$opponent++;
-					sleep 1;
-				} while ($match == 0);
+				}
+				else {
+					# End of list and no match found.
+					print STDERR "DEBUG: No Match found, " . $player . " is matched with BYE.\n" if $DEBUG;
+					$nomatch = 0;
+					$BYE = 1;
+				}
+				sleep 1;
+			} while ($nomatch);
+			if ($BYE) {  
+				print STDERR "DEBUG: Finalizing BYE for " . $player . ".\n" if $DEBUG;
+				push @{$player_data->{$player}->{opponents}}, 'BYE';
+				$player_data->{$player}->{prestige}[$score_round] = 4;
+			}
+			else {
+				print STDERR "DEBUG: Finalizing match of " . $Players[$opponent] . " With " . $player . ".\n" if $DEBUG;
 				push @{$player_data->{$player}->{opponents}}, $Players[$opponent];
 				push @{$player_data->{$Players[$opponent]}->{opponents}}, $player;
 			}
-			else {
-				push @{$player_data->{$player}->{opponents}}, 'BYE';
-				$player_data->{$player}->{prestige}[$score_round] = 5;
-			}
 		}
 	}
+	DumpFile($opts{f} . ".yml", $player_data);
 }
 
 sub Show_Matchups {
+	my %matchups;
+	for (keys $player_data) {
+		$matchups{$_} = $player_data->{$_}->{opponents}[$score_round];
+	}
+
 
 	my $spacer = 0;
 	for (keys $player_data) {
@@ -132,9 +161,15 @@ sub Show_Matchups {
 	}
 	$spacer += 5;
 
-	for (sort keys $player_data) {
-		print sprintf( "%-${spacer}s %-5s %-${spacer}s \n", $_, '->' ,$player_data->{$_}->{opponents}[$score_round]);
+	print "Round $score_round Pairings\n";
+
+	for (sort keys %matchups) {
+		if (defined $matchups{$_}) {
+			print sprintf( "%-${spacer}s %-5s %-${spacer}s \n", $_, '->' ,$matchups{$_});
+			delete $matchups{$matchups{$_}};
+		}
 	}
+	print "\n";
 }
 
 sub View_Standings {
@@ -148,7 +183,14 @@ sub View_Standings {
 		push $_, $Sos;
 	}
 	my @Players = map { $_->[1] } sort { $b->[0] <=> $a->[0] || $b->[2] <=> $a->[2] } @temp;
-		print      "  Player Name                              Prestige        SoS\n";
+
+	my $spacer = 0;
+	for (keys $player_data) {
+		$spacer = length if length > $spacer;
+	}
+
+	print form "  {>>>} {<{" . ($spacer) . "}<} {<<<<<<<} {<<<}  {<{". ($spacer x $score_round) ."}<}",
+	"Rank", "Player","Prestige", "SoS", "Oponents";
 	my $index = 0;
 	for my $player (@Players) {
 		my $prestige = 0;
@@ -160,10 +202,17 @@ sub View_Standings {
 		for (@{$player_data->{$player}->{opponents}}) {
 			$Sos += sum(@{$player_data->{$_}->{prestige}}) unless $_ eq 'BYE';
 		}
+		my $opponents;
+		for my $opp (@{$player_data->{$player}->{opponents}}) {
+			my $standing = firstidx { $_ eq "$opp" } @Players;
+			$standing++;
+			$opponents = $opponents . sprintf("%-" . ($spacer) . "s " , $opp);
+		}
 
-		print form "  {>} {<<<<<<<<<<<<<<<<<<<<}    {>>>>>>>>}    {>>>>>>>>}",
-		              $n, $player,                  $prestige,    $Sos;
+		print form "  {>>>} {<{" . ($spacer) . "}<} {<<<<<<<} {<<<}  {<{". ($spacer x $score_round) ."}<}",
+		              $n, $player,                  $prestige,    $Sos,         $opponents;
 	}
+		print "\n";
 }
 
 sub Load_Player_data {
@@ -228,7 +277,7 @@ sub Load_Player_data {
 
 sub Score_Data {
 	# Filter out players with score data for this round
-	my @sorted_players;  ;
+	my @sorted_players; 
 	for (sort keys %$player_data){
 		unless (defined $player_data->{$_}->{prestige}[$score_round]) {
 			push @sorted_players, $_;
@@ -245,10 +294,11 @@ sub Score_Data {
 		prompt => 'Score which player?',
 		choices => \@sorted_players,
 	);
+
 	my $Player2 = $player_data->{$Player}->{opponents}[$score_round];
 	print "Scoring game vs $Player2\n";
 
-# valid scoring options as of Aug, 2014
+	# valid scoring options as of Aug, 2014
 	my @score_options = (
 		'Won both games', 
 		'Won and Lost', 
@@ -335,4 +385,5 @@ sub Score_Data {
 			$player_data->{$Player2}->{prestige}[$score_round] = 4;
 		}
 	}
+	DumpFile($opts{f} . ".yml", $player_data);
 }
