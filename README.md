@@ -39,7 +39,7 @@ score.pl -f players_list.txt
 where players_list.txt is the name of the text file containing the players.
 
 
-h3. Main Menu
+### Main Menu
 
 ```
 Current Round:1 of 5
@@ -72,7 +72,7 @@ If you wish to restart the tournament or load a new tournament with the same pla
 
 
 
-h3. Recording score data
+### Recording score data
 
 As round results are completed, you can enter the data by pressing 1.
 
