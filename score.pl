@@ -223,7 +223,7 @@ sub View_Standings {
     print form "  {>>>} {<{"
       . ($spacer)
       . "}<} {<<<<<<<} {<<<}  {<{"
-      . ( $spacer x $score_round ) . "}<}",
+      . ( $spacer x ($score_round + 1) ) . "}<}",
       "Rank", "Player", "Prestige", "SoS", "Oponents";
     my $index = 0;
     for my $player (@Players) {
@@ -247,7 +247,7 @@ sub View_Standings {
         print form "  {>>>} {<{"
           . ($spacer)
           . "}<} {<<<<<<<} {<<<}  {<{"
-          . ( $spacer x $score_round ) . "}<}",
+          . ( $spacer x ($score_round + 1) ) . "}<}",
           $n, $player, $prestige, $Sos, $opponents;
     }
     print "\n";
