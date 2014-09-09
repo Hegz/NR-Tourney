@@ -103,7 +103,7 @@ There are still some bugs to resolve, and a few features to add to improve progr
 
 
 #### Known Bugs
-  * it is possible to crash the program by viewing the standings when no score data has been entered.
+  * Nothing at this time, But don't place too much trust in me.
 
 #### Features
   * Remove the Advance round menu item, and auto advance the round after the last score data has been entered.
