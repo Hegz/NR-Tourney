@@ -34,6 +34,7 @@ my $data_file = $opts{'f'} . ".yml";
 my $score_round;
 my $player_data;
 my $total_rounds;
+my $matchups_shown;
 
 unless ( -e $data_file ) {
     Load_Player_data();
@@ -54,6 +55,7 @@ my @menu = (
     'Advance Round',
     'Show Matchups',
     'View standings',
+	'Administrator Override',
     'Save & Quit'
 );
 my $main_menu;
@@ -61,10 +63,10 @@ do {
     $main_menu = $term->get_reply(
         prompt   => "Menu selection",
         choices  => \@menu,
-        default  => $menu[4],
-        print_me => "Current Round:"
+        default  => $menu[-1],
+        print_me => "\nCurrent Round:"
           . ( $score_round + 1 )
-          . " of $total_rounds",
+          . " of $total_rounds\n",
     );
 
     for ($main_menu) {
@@ -73,9 +75,10 @@ do {
         Select_round() when $_   eq $menu[1];
         Show_Matchups() when $_  eq $menu[2];
         View_Standings() when $_ eq $menu[3];
+        Override() when $_       eq $menu[4];
     }
 
-} while ( $main_menu ne $menu[4] );
+} while ( $main_menu ne $menu[-1] );
 
 $player_data->{'META'} = {
     score_round  => $score_round,
@@ -88,6 +91,7 @@ exit 0;
 sub Select_round {
     $score_round++;
     Make_Pairing();
+	$matchups_shown = undef;
     return 0;
 }
 
@@ -196,6 +200,7 @@ sub Show_Matchups {
         }
     }
     print "\n";
+	$matchups_shown = 1;
     return 0;
 }
 
@@ -230,6 +235,11 @@ sub View_Standings {
         my $prestige = 0;
         my $Sos      = 0;
         my $n        = ++$index . '.';
+
+		if ($player_data->{$player}->{status} eq 'Disabled') {
+			--$index;
+			$n = '!DEL-';
+		}
 
         $prestige = sum( @{ $player_data->{$player}->{prestige} } );
 
@@ -288,11 +298,13 @@ sub Load_Player_data {
         $player_data->{$player1} = {
             opponents => [$player2],
             prestige  => [ ( undef, ) x $rounds ],
+			status    => 'Active',
         };
 
         $player_data->{$player2} = {
             opponents => [$player1],
             prestige  => [ ( undef, ) x $rounds ],
+			status    => 'Active',
         };
 
         if ( $player2 eq 'BYE' ) {
@@ -308,7 +320,7 @@ sub Load_Player_data {
             $player_data->{$player2}->{prestige}[0] = 4;
         }
 
-        print STDERR "DEBUG:" . scalar @players . " remaining.\n" if $DEBUG;
+         print STDERR "DEBUG:" . scalar @players . " remaining.\n" if $DEBUG;
     } while ( scalar @players > 0 );
 
     $score_round  = 0;
@@ -323,6 +335,12 @@ sub Load_Player_data {
 
 sub Score_Data {
 
+	# Prevent accidental scores from being entered
+	unless (defined $matchups_shown) {
+		print "\nERROR: You cannot add score data without valid matchups.\n";
+		return 0;
+	}
+
     # Filter out players with score data for this round
     my @sorted_players;
     for ( sort keys %$player_data ) {
@@ -334,6 +352,15 @@ sub Score_Data {
     if ( scalar @sorted_players == 0 ) {
         print "No More players to score for round "
           . ( $score_round + 1 ) . ".\n";
+		if ( ($score_round + 1) < $total_rounds ){
+			print "\n\n--== Advancing to round " 
+              . ( $score_round + 2 ) . " of "
+			  . $total_rounds . "==--\n\n";
+			Select_round();
+		}
+		else {
+			View_Standings();
+		}
         return;
     }
 
@@ -445,4 +472,47 @@ sub Score_Data {
     }
     DumpFile( $opts{f} . ".yml", $player_data );
     return 0;
+}
+
+sub Override {
+	# Note: This whole password thing is a joke. Anything other then a blank string will let you in.
+	my $term = Term::ReadLine->new('passwd');
+	my $passwd = $term->readline("Please enter the Administrator Password:");
+	if ($passwd eq '') {
+		print "\nPassword incorrect\n --== ACCESS DENIED ==--\n";
+		return 0;
+	}
+	print "\n --== ACCESS GRANTED ==--\n";
+
+
+	my @menu = (
+		'Disable / Enable player',
+		'Manual Score Adjustment',
+		'Return'
+	);
+	my $override_menu;
+	do {
+		$override_menu = $term->get_reply(
+			prompt   => "Admin Function",
+			choices  => \@menu,
+			default  => $menu[-1],
+			print_me => "\nADMINISTRATOR OVERRIDE ENABLED",
+		);
+
+		for ($override_menu) {
+			no warnings qw(experimental);
+			Admin_Remove() when $_   eq $menu[0];
+			Admin_Adjust() when $_   eq $menu[1];
+		}
+
+	} while ( $override_menu ne $menu[-1] );
+	return 0;
+}
+
+sub Admin_Adjust {
+
+}
+
+sub Admin_Remove {
+
 }

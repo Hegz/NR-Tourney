@@ -1,3 +1,11 @@
 2014/09/09
   * Fixed a bug preventing the standings from being viewed before the round
   had been advanced once.
+
+  * Round will now auto advance after the last score has been entered, or
+  display the final standings if it's the last round.
+
+  * Added the ability to mark players as Disabled for standings.
+
+  * Added Administrator override menu for disable / enable players, and manual
+  score adjustments, not yet functional.
