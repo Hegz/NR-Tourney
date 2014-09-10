@@ -118,7 +118,7 @@ sub Make_Pairing {
     }
     for my $i ( 0 .. $#Players ) {
         my $player = $Players[$i];
-        unless ( defined $player_data->{$player}->{opponents}[$score_round] ) {
+        unless ( defined $player_data->{$player}->{opponents}[$score_round] || $player_data->{$player}->{status} eq 'Disabled') {
             print STDERR "DEBUG: $i " . $player . ".\n" if $DEBUG;
             print STDERR
 "DEBUG:    previous opponents: @{$player_data->{$player}->{opponents}}\n"
@@ -130,7 +130,7 @@ sub Make_Pairing {
                 # Check next opponent in list to see if they are a valid pair
                 $opponent++;
                 $nomatch = 0;
-                if ( defined $Players[$opponent] ) {
+                if ( defined $Players[$opponent] && $player_data->{$Players[$opponent]}->{status} ne 'Disabled') {
                     print STDERR "DEBUG:   ->  checking $opponent "
                       . $Players[$opponent] . "\n"
                       if $DEBUG;
@@ -190,7 +190,7 @@ sub Show_Matchups {
     }
     $spacer += 5;
 
-    print "Round $score_round Pairings\n";
+    print "Round " . $score_round + 1 . " Pairings\n";
 
     for ( sort keys %matchups ) {
         if ( defined $matchups{$_} ) {
@@ -344,13 +344,13 @@ sub Score_Data {
     # Filter out players with score data for this round
     my @sorted_players;
     for ( sort keys %$player_data ) {
-        unless ( defined $player_data->{$_}->{prestige}[$score_round] ) {
+        unless ( defined $player_data->{$_}->{prestige}[$score_round] || $player_data->{$_}->{status} eq 'Disabled') {
             push @sorted_players, $_;
         }
     }
 
     if ( scalar @sorted_players == 0 ) {
-        print "No More players to score for round "
+         print "No More players to score for round "
           . ( $score_round + 1 ) . ".\n";
 		if ( ($score_round + 1) < $total_rounds ){
 			print "\n\n--== Advancing to round " 
@@ -486,13 +486,16 @@ sub Override {
 
 
 	my @menu = (
-		'Disable / Enable player',
-		'Manual Score Adjustment',
+		'Disable Player',
+		'Enable player',
+		'Add Player',
+		'Score Adjustment',
+		'Opponent Adjustment',
 		'Return'
 	);
 	my $override_menu;
 	do {
-		$override_menu = $term->get_reply(
+		$override_menu = $term->get_reply( 
 			prompt   => "Admin Function",
 			choices  => \@menu,
 			default  => $menu[-1],
@@ -501,18 +504,110 @@ sub Override {
 
 		for ($override_menu) {
 			no warnings qw(experimental);
-			Admin_Remove() when $_   eq $menu[0];
-			Admin_Adjust() when $_   eq $menu[1];
+			Admin_Disable() when $_  eq $menu[0];
+			Admin_Enable() when $_   eq $menu[1];
+			Admin_Add() when $_      eq $menu[2];
+			Admin_Score() when $_    eq $menu[3];
+			Admin_Pairing() when $_  eq $menu[4];
 		}
 
 	} while ( $override_menu ne $menu[-1] );
 	return 0;
 }
 
-sub Admin_Adjust {
+sub Admin_Score {
 
 }
 
-sub Admin_Remove {
+sub Admin_Pairing {
 
 }
+
+sub Admin_Add {
+
+}
+
+sub Admin_Disable {
+
+    # Filter out players who are disabled
+    my @sorted_players;
+    for ( sort keys %$player_data ) {
+        unless ($player_data->{$_}->{status} eq 'Disabled') {
+            push @sorted_players, $_;
+        }
+    }
+
+    if ( scalar @sorted_players == 0 ) {
+		print "ERROR: No Active players. What kind of tournament are you running?\n";
+        return;
+    }
+
+    # prompt for player
+    my $Player = $term->get_reply(
+        prompt  => 'Disable which player?',
+        choices => \@sorted_players,
+    );
+
+	print $Player . " has been DEREZED.\n";
+	print $Player . "'s previosu oppoment Will be matched with BYE, or player who was previosuly matched with BYE.\n";
+	$player_data->{$Player}->{status} = 'Disabled';
+
+	if ( ((scalar @sorted_players) - 1) % 2 == 1 ) {
+		my $Opponent = $player_data->{$Player}->{opponents}[$score_round];
+		$player_data->{$Opponent}->{opponents}[$score_round] = 'BYE';
+		$player_data->{$Opponent}->{prestige}[$score_round] = '4';
+	}
+	else {
+		$player_data->{$Player}->{opponents}[$score_round] = undef;
+		$player_data->{$Player}->{prestige}[$score_round] = undef;
+	}
+
+	return 0;
+}
+
+sub Admin_Enable {
+
+    # Filter out players who are not disabled
+    my @sorted_players;
+    for ( sort keys %$player_data ) {
+        if ($player_data->{$_}->{status} eq 'Disabled') {
+            push @sorted_players, $_;
+        }
+    }
+
+    if ( scalar @sorted_players == 0 ) {
+		print "ERROR: No Players are disabled at this time.\n";
+        return;
+    }
+
+    # prompt for player
+    my $Player = $term->get_reply(
+        prompt  => 'Enable which player?',
+        choices => \@sorted_players,
+    );
+
+	print $Player . " has been REZED.\n";
+	print $Player . "Will be matched with the BYE, or player who previosuly had the BYE.\n";
+	$player_data->{$Player}->{status} = 'Active';
+
+	if ( ((scalar @sorted_players) + 1) % 2 == 1 ) {
+		my $Opponent; 
+		for (keys $player_data) {
+			if ($player_data->{$_}->{opponents}[$score_round] eq 'BYE') {
+				$Opponent = $_;
+				last;
+			}
+		}
+		$player_data->{$Opponent}->{opponents}[$score_round] = $Player;
+		$player_data->{$Opponent}->{prestige}[$score_round] = undef;
+		$player_data->{$Player}->{opponents}[$score_round] = $Opponent;
+		$player_data->{$Player}->{prestige}[$score_round] = undef;
+	}
+	else {
+		$player_data->{$Player}->{opponents}[$score_round] = 'BYE';
+		$player_data->{$Player}->{prestige}[$score_round] = 4;
+	}
+	return 0;
+}
+
+

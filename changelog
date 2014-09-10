@@ -9,3 +9,8 @@
 
   * Added Administrator override menu for disable / enable players, and manual
   score adjustments, not yet functional.
+
+  2014/09/10
+
+  * Added functionality to enable and disable players. Players/Opponents will
+  be matched with the BYE player, or the player who previously had the BYE

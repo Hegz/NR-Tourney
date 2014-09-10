@@ -106,6 +106,6 @@ There are still some bugs to resolve, and a few features to add to improve progr
   * Nothing at this time, But don't place too much trust in me.
 
 #### Features
-  * Remove the Advance round menu item, and auto advance the round after the last score data has been entered.
-  * Display final standings once the last Score has been entered in the last round.
-  * Add ability to withdraw a player from the tournament.
+  * Add Player to the Tournament
+  * Manual change of Score data
+  * Manual change of Pairing
