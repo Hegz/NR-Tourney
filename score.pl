@@ -22,6 +22,7 @@ use Term::ReadLine;
 use Getopt::Std;
 use Perl6::Form;
 use List::MoreUtils qw(firstidx);
+use Scalar::Util qw(looks_like_number);
 my $DEBUG = 0;
 
 # Set file name to work from
@@ -488,10 +489,12 @@ sub Override {
 	my @menu = (
 		'Disable Player',
 		'Enable player',
-		'Add Player',
-		'Score Adjustment',
-		'Opponent Adjustment',
-		'Return'
+		'Add Player -- WIP',
+		'Score Adjustment -- WIP',
+		'Opponent Adjustment -- WIP',
+		'Re Create Pairings',
+		'Override Rounds',
+		'Return',
 	);
 	my $override_menu;
 	do {
@@ -509,10 +512,51 @@ sub Override {
 			Admin_Add() when $_      eq $menu[2];
 			Admin_Score() when $_    eq $menu[3];
 			Admin_Pairing() when $_  eq $menu[4];
+			Admin_Matchups() when $_ eq $menu[5];
+			Admin_Round() when $_    eq $menu[6];
 		}
 
 	} while ( $override_menu ne $menu[-1] );
 	return 0;
+}
+
+sub Admin_Matchups {
+	for ( keys $player_data ) {
+		$player_data->{$_}->{opponents}[$score_round] = undef;
+	}
+	Make_Pairing();
+}
+
+sub Admin_Round {
+
+	my $term = Term::ReadLine->new('round');
+
+	print "\nCurrent Total rounds Required: " . $total_rounds . "\n\n";
+	my $new_total_rounds = $term->readline("Set the new total to (Enter to Cancel):");
+	if ($new_total_rounds eq '') {
+		print "\nTotal Rounds Unchanged\n";
+	}
+	elsif ( (looks_like_number($new_total_rounds)) && ($new_total_rounds gt 0) ) {
+		$total_rounds = $new_total_rounds;
+	}
+	else {
+		print "\nError: Please enter a NUMBER Greater then 0.\n";
+	}
+
+	print "\nCurrent Round: " . $score_round + 1 . "\n\n";
+	my $new_round = $term->readline("Set the curent round to (Enter to Cancel):");
+	if ($new_round eq '') {
+		print "\nCurrent Round Unchanged\n";
+	}
+	elsif ( (looks_like_number($new_round))  && ($new_round lt $total_rounds) && ($total_rounds gt 0)) {
+		$score_round = $new_round - 1;
+	}
+	else {
+		print "\nError: Please enter a NUMBER Greater then 0 and less then the total number of rounds.\n";
+	}
+	print "\nPlease be sure to Re Create the Pairings if the current round changed.\n";
+
+return 0;
 }
 
 sub Admin_Score {

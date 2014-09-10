@@ -1,16 +1,21 @@
 2014/09/09
-  * Fixed a bug preventing the standings from being viewed before the round
-  had been advanced once.
+  * BUG: Fixed a bug preventing the standings from being viewed before the 
+  round had been advanced once.
 
-  * Round will now auto advance after the last score has been entered, or
-  display the final standings if it's the last round.
+  * FEATURE: Round will now auto advance after the last score has been entered,
+  or display the final standings if it's the last round.
 
-  * Added the ability to mark players as Disabled for standings.
+  * FEATURE: Added the ability to mark players as Disabled for standings.
 
-  * Added Administrator override menu for disable / enable players, and manual
-  score adjustments, not yet functional.
+  * FEATURE: Added Administrator override menu for disable / enable players, 
+  and manual score adjustments, not yet functional.
 
   2014/09/10
 
-  * Added functionality to enable and disable players. Players/Opponents will
-  be matched with the BYE player, or the player who previously had the BYE
+  * FEATURE: Added functionality to enable and disable players. Players/Opponents 
+  will be matched with the BYE player, or the player who previously had the BYE.
+
+  * FEATURE: Added the ability to re run the pairing routine.
+
+  * FEATURE: Added the ability to override the current round, and total rounds
+  required.
