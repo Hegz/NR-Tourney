@@ -47,9 +47,10 @@ Current Round:1 of 5
   2> Advance Round
   3> Show Matchups
   4> View standings
-  5> Save & Quit
+  5> Administrator Override
+  6> Save & Quit
 
-Menu selection [5]: 
+Menu selection [6]: 
 ```
 
 The current round is displayed at the top of the menu, along with the total number of rounds required to come to a consensus.
@@ -62,9 +63,9 @@ You can then repeat the process of `Show Matchups` , `Add Score Data`, `Advance 
 
 You can view the current standings by pressing 4.
 
-At Any time you can press 5 to save and quit the tournament.  The Tournament data will be saved to a file players_list.yml, when you re run the progam with the command:
+At Any time you can press 6 to save and quit the tournament.  The Tournament data will be saved to a file players_list.yml, when you re run the progam with the command:
 ```
-score.pl -f My_Tournament.txt
+score.pl -f players_list.txt
 ```
 Any saved tournament data will be reloaded.
 
