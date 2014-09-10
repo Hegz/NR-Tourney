@@ -44,6 +44,11 @@ else {
     $player_data  = LoadFile($data_file);
     $score_round  = $player_data->{META}->{score_round};
     $total_rounds = $player_data->{META}->{total_rounds};
+	for (keys $player_data) {
+		unless ( defined $player_data->{$_}->{status}) {
+			$player_data->{$_}->{status} = 'Active';
+		}
+	}
 }
 
 my $term = Term::ReadLine->new('brand');
@@ -365,11 +370,17 @@ sub Score_Data {
         return;
     }
 
+	push @sorted_players, 'Return';
+
     # prompt for player
     my $Player = $term->get_reply(
         prompt  => 'Score which player?',
         choices => \@sorted_players,
+		default => $sorted_players[-1],
     );
+	if ($Player eq $sorted_players[-1]) {
+		return 0;
+	}
 
     my $Player2 = $player_data->{$Player}->{opponents}[$score_round];
     print "Scoring game vs $Player2\n";
@@ -390,11 +401,16 @@ sub Score_Data {
         'Lost both games'
     );
 
+	push @score_options, 'Return';
     # Prompt for Score
     my $score = $term->get_reply(
         prompt  => 'Match Result',
         choices => \@score_options,
+		default => $score_options[-1],
     );
+	if ($score eq $score_options[-1]) {
+		return 0;
+	}
 
     for ($score) {
         no warnings qw(experimental);
@@ -484,7 +500,7 @@ sub Override {
 		return 0;
 	}
 	print "\n --== ACCESS GRANTED ==--\n";
-
+	print "\n !!Please be carefull with the options in this menu!!\n";
 
 	my @menu = (
 		'Disable Player',
@@ -560,6 +576,45 @@ return 0;
 }
 
 sub Admin_Score {
+	my $spacer = 0;
+	for ( keys $player_data ) {
+		$spacer = length if length > $spacer;
+	}
+
+	my $format = "{<{" . ($spacer) . "}<}"; 
+	my @header = ("Player name");
+	
+	for (1 .. $total_rounds) {
+		$format = $format . " {<<<<<<<}";
+		push @header, " Round " . $_;
+	}
+
+	my $title = form $format, @header;
+	chomp $title;
+	my @menu;
+
+	for my $p (sort keys $player_data) {
+		my @data = ($p);
+		for (0 .. ($total_rounds) -1 ) {
+			if (defined $player_data->{$p}->{prestige}[$_]){
+			push @data, $player_data->{$p}->{prestige}[$_];
+			}
+			else {
+				push @data, 'N/A';
+			}
+		}
+		push @menu, (form $format, @data);
+	}
+	chomp @menu;
+	push @menu, "Return";
+
+    # Prompt for player
+    my $player = $term->get_reply(
+        prompt  => 'Player to edit',
+        choices => \@menu,
+        default  => $menu[-1],
+		print_me => "\n     $title",
+    );
 
 }
 
@@ -572,7 +627,6 @@ sub Admin_Add {
 }
 
 sub Admin_Disable {
-
     # Filter out players who are disabled
     my @sorted_players;
     for ( sort keys %$player_data ) {
@@ -585,12 +639,17 @@ sub Admin_Disable {
 		print "ERROR: No Active players. What kind of tournament are you running?\n";
         return;
     }
+	push @sorted_players, 'Return';
 
     # prompt for player
     my $Player = $term->get_reply(
         prompt  => 'Disable which player?',
         choices => \@sorted_players,
+		default => $sorted_players[-1],
     );
+	if ($Player eq $sorted_players[-1]){
+		return 0;
+	}
 
 	print $Player . " has been DEREZED.\n";
 	print $Player . "'s previosu oppoment Will be matched with BYE, or player who was previosuly matched with BYE.\n";
@@ -624,11 +683,16 @@ sub Admin_Enable {
         return;
     }
 
+	push @sorted_players, 'Return';
     # prompt for player
     my $Player = $term->get_reply(
         prompt  => 'Enable which player?',
         choices => \@sorted_players,
+		default => $sorted_players[-1],
     );
+	if ($Player eq $sorted_players[-1]) {
+		return 0;
+	}
 
 	print $Player . " has been REZED.\n";
 	print $Player . "Will be matched with the BYE, or player who previosuly had the BYE.\n";
