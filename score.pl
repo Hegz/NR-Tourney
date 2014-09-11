@@ -507,7 +507,7 @@ sub Override {
 		'Enable player',
 		'Add Player -- WIP',
 		'Score Adjustment',
-		'Opponent Adjustment -- WIP',
+		'Opponent Adjustment',
 		'Re Create Pairings',
 		'Override Rounds',
 		'Return',

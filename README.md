@@ -108,5 +108,3 @@ There are still some bugs to resolve, and a few features to add to improve progr
 
 #### Features
   * Add Player to the Tournament
-  * Manual change of Score data
-  * Manual change of Pairing
