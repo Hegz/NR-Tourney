@@ -505,7 +505,7 @@ sub Override {
 	my @menu = (
 		'Disable Player',
 		'Enable player',
-		'Add Player -- WIP',
+		'Add Player',
 		'Score Adjustment',
 		'Opponent Adjustment',
 		'Re Create Pairings',
