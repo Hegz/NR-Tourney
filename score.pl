@@ -506,7 +506,7 @@ sub Override {
 		'Disable Player',
 		'Enable player',
 		'Add Player -- WIP',
-		'Score Adjustment -- WIP',
+		'Score Adjustment',
 		'Opponent Adjustment -- WIP',
 		'Re Create Pairings',
 		'Override Rounds',
@@ -585,13 +585,14 @@ sub Admin_Score {
 	my @header = ("Player name");
 	
 	for (1 .. $total_rounds) {
-		$format = $format . " {<<<<<<<}";
+		$format = $format . " {>>>>>>>}";
 		push @header, " Round " . $_;
 	}
 
 	my $title = form $format, @header;
 	chomp $title;
 	my @menu;
+	my @players;
 
 	for my $p (sort keys $player_data) {
 		my @data = ($p);
@@ -603,10 +604,11 @@ sub Admin_Score {
 				push @data, 'N/A';
 			}
 		}
+		push @players, $p;
 		push @menu, (form $format, @data);
 	}
 	chomp @menu;
-	push @menu, "Return";
+	push @menu, "Cancel Edit";
 
     # Prompt for player
     my $player = $term->get_reply(
@@ -615,7 +617,75 @@ sub Admin_Score {
         default  => $menu[-1],
 		print_me => "\n     $title",
     );
+	if ($player eq $menu[-1]){
+		return 0;
+	}
 
+	my $select = $players[ firstidx { $_ eq $player } @menu];
+
+	$format = "{<<<<<<<<<<} {>>>>>>>}";
+
+	@menu = ();
+	my @rounds;
+	for (0 .. ($total_rounds) -1 ) {
+		my @data;
+		push @rounds, $_;
+		push @data, "Round " . ($_ + 1);
+		if (defined $player_data->{$select}->{prestige}[$_]){
+			push @data, $player_data->{$select}->{prestige}[$_];
+		}
+		else {
+			push @data, 'N/A';
+		}
+		push @menu, (form $format, @data);
+	}
+	push @menu, "Cancel Edit";
+	chomp @menu;
+
+    # Prompt for round 
+    my $round = $term->get_reply(
+        prompt  => 'Round to edit',
+        choices => \@menu,
+        default  => $menu[-1],
+		print_me => "\n     Round         Prestige",
+    );
+	if ($round eq $menu[-1]){
+		return 0;
+	}
+	my $r = $rounds[ firstidx { $_ eq $round } @menu];
+
+	my $term = Term::ReadLine->new('prestige');
+
+	my $new_prestige;
+
+	do { 
+		$new_prestige = $term->readline("Set prestige to (Enter to Cancel):");
+		if ($new_prestige eq '') {
+			print "\nPrestige for $select for Round " . $r +1 . " Unchanged.\n";
+		}
+		elsif ( looks_like_number($new_prestige) ) {
+			$player_data->{$select}->{prestige}[$r] = $new_prestige;
+		}
+		else {
+			print "\nError: Please enter a NUMBER.\n";
+		}
+	} until ( looks_like_number($new_prestige) || $new_prestige eq '' );
+
+	my $opponent = $player_data->{$select}->{opponent}[$r];
+	do { 
+		print "Set prestige for " . $select . "s Round " . $r + 1 . " opponenet: $opponent\n";
+		$new_prestige = $term->readline("Set prestige to (Enter to Cancel):");
+		if ($new_prestige eq '') {
+			print "\nPrestige for $opponent for Round " . $r +1 . " Unchanged.\n";
+		}
+		elsif ( looks_like_number($new_prestige) ) {
+			$player_data->{$opponent}->{prestige}[$r] = $new_prestige;
+		}
+		else {
+			print "\nError: Please enter a NUMBER.\n";
+		}
+	} until ( looks_like_number($new_prestige) || $new_prestige eq '' );
+	return 0;
 }
 
 sub Admin_Pairing {
