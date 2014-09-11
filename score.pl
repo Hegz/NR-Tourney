@@ -671,7 +671,7 @@ sub Admin_Score {
 		}
 	} until ( looks_like_number($new_prestige) || $new_prestige eq '' );
 
-	my $opponent = $player_data->{$select}->{opponent}[$r];
+	my $opponent = $player_data->{$select}->{opponents}[$r];
 	do { 
 		print "Set prestige for " . $select . "s Round " . $r + 1 . " opponenet: $opponent\n";
 		$new_prestige = $term->readline("Set prestige to (Enter to Cancel):");
@@ -689,7 +689,105 @@ sub Admin_Score {
 }
 
 sub Admin_Pairing {
+	my $spacer = 0;
+	for ( keys $player_data ) {
+		$spacer = length if length > $spacer;
+	}
+	my @rounds;
+	my $format = "{<{" . ($spacer) . "}<}"; 
+	my @header = ("Player name");
+	
+	for (1 .. $total_rounds) {
+		$format = $format . " {<{" . ($spacer) . "}<}";
+		push @header, " Round " . $_;
+		push @rounds, "Round " . ($_ - 1);
+	}
+	print "\n ";
+	print form $format, @header;
+	my @pairing_data;
 
+	for my $p (sort keys $player_data) {
+		my @data = ($p);
+		for (0 .. ($total_rounds) -1 ) {
+			if (defined $player_data->{$p}->{opponents}[$_]){
+				push @data, $player_data->{$p}->{opponents}[$_];
+			}
+			else {
+				push @data, 'N/A';
+			}
+		}
+		push @pairing_data, (form $format, @data);
+	}
+	print " @pairing_data";
+	push @rounds, "Cancel Edit";
+
+    # Prompt for player
+    my $round = $term->get_reply(
+        prompt  => 'Choose round',
+        choices => \@rounds,
+        default  => $rounds[-1],
+		print_me => "\nEdit pairing data for which round?",
+    );
+	if ($round eq $rounds[-1]){
+		return 0;
+	}
+
+	my $selected_round = $rounds[ firstidx { $_ eq $round } @menu];
+
+	$format = "{<{" . ($spacer) . "}<}   {<{" . ($spacer) . "}<}"; 
+	my $title = print form $format, 'Player', 'Opponent';
+	my @round_match;
+	do {
+		my @players;
+		for my $p (sort keys $player_data) {
+			my @data = ($p);
+			if (defined $player_data->{$p}->{opponents}[$selected_round]){
+				push @data, $player_data->{$p}->{opponents}[$selected_round];
+				push @players, $p;
+			}
+			else {
+				push @data, 'N/A';
+			}
+			push @round_match, (form $format, @data);
+		}
+		push @round_match, "Clear All Pairings", "Return";
+		my $round = $term->get_reply(
+			prompt  => 'Choose round',
+			choices => \@rounds,
+			default  => $rounds[-1],
+			print_me => "\nEdit pairing data for which round?",
+		);
+
+		my $selected_player = $players[ firstidx { $_ eq $round } @rounds];
+		
+		if ($round eq $round_match[-2]){
+			for (keys $player_data) {
+				$player_data->{$_}->{opponents}[$selected_round] = undef;
+			}
+		}
+		elsif ($round ne $round_match[-1]) {
+			my @menu;
+			for (sort keys $player_data) {
+				push @menu, $_ unless $_ eq $selected_player;
+			}
+			push @menu, "Cancel";
+			my $opponent = $term->get_reply(
+				prompt  => "Select the opponent for $selected_player",
+				choices => \@menu,
+				default  => $menu[-1],
+				print_me => "\nOpponent Selection",
+			);
+			if ($opponent eq $menu[-1]){
+				next;
+			}
+			else {
+				$player_data->{$selected_player}->{opponents}[$selected_round] = $opponent;
+				$player_data->{$selected_player}->{prestige}[$selected_round] = undef;
+				$player_data->{$opponent}->{opponents}[$selected_round] = $selected_player;
+				$player_data->{$opponent}->{prestige}[$selected_round] = undef;
+			}
+		}
+	} until ($round eq $round_match[-1]);
 }
 
 sub Admin_Add {
