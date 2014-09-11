@@ -196,7 +196,7 @@ sub Show_Matchups {
     }
     $spacer += 5;
 
-    print "Round " . $score_round + 1 . " Pairings\n";
+    print "Round " . ($score_round + 1) . " Pairings\n";
 
     for ( sort keys %matchups ) {
         if ( defined $matchups{$_} ) {
@@ -219,7 +219,7 @@ sub View_Standings {
         my $name = $_->[1];
         for ( @{ $player_data->{$name}->{opponents} } ) {
             $Sos += sum( @{ $player_data->{$_}->{prestige} } )
-              unless $_ eq 'BYE';
+              unless $_ eq 'BYE' || $_ eq 'N/A';
         }
         push $_, $Sos;
     }
@@ -251,7 +251,7 @@ sub View_Standings {
 
         for ( @{ $player_data->{$player}->{opponents} } ) {
             $Sos += sum( @{ $player_data->{$_}->{prestige} } )
-              unless $_ eq 'BYE';
+              unless $_ eq 'BYE' || $_ eq 'N/A';
         }
         my $opponents;
         for my $opp ( @{ $player_data->{$player}->{opponents} } ) {
@@ -753,8 +753,8 @@ sub Admin_Pairing {
 		push @round_match, "Clear All Pairings", "Return";
 		my $round = $term->get_reply(
 			prompt  => 'Choose round',
-			choices => \@rounds,
-			default  => $rounds[-1],
+			choices => \@round_match,
+			default  => $round_match[-1],
 			print_me => "\nEdit pairing data for which round?",
 		);
 
@@ -796,7 +796,7 @@ sub Admin_Add {
 	if ($new_player eq '') {
 		return 0;
 	}
-	if (scalar keys $player_data %2 == 1) {
+	if ((scalar (keys $player_data)) % 2 == 1) {
 		for (keys $player_data) {
 			if ( $player_data->{$_}->{opponents}[$score_round] eq 'BYE'){
 				$player_data->{$_}->{opponents}[$score_round] = $new_player;
@@ -804,9 +804,13 @@ sub Admin_Add {
 
 				$player_data->{$new_player} = {
 					opponents => [('N/A', ) x $score_round],
-					prestige  => [ ( 0, ) x $score_round ],
+					prestige  => [ ( undef, ) x $total_rounds ],
 					status    => 'Active',
 		        };
+				for ( 0 .. ($score_round - 1 )) {
+					$player_data->{$new_player}->{prestige}[$_] = 0;
+				}
+
 		        $player_data->{$new_player}->{opponents}[$score_round] = $_;
 				$player_data->{$new_player}->{prestige}[$score_round] = undef;
 				last;
@@ -816,9 +820,12 @@ sub Admin_Add {
 	else {
 		$player_data->{$new_player} = {
 			opponents => [('N/A', ) x $score_round],
-			prestige  => [ ( 0, ) x $score_round ],
+			prestige  => [ ( undef, ) x $total_rounds ],
 			status    => 'Active',
 		};
+		for ( 0 .. ($score_round - 1 )) {
+			$player_data->{$new_player}->{prestige}[$_] = 0;
+		}
 		$player_data->{$new_player}->{opponents}[$score_round] = 'BYE';
 		$player_data->{$new_player}->{prestige}[$score_round] = 4;
 	}
@@ -833,7 +840,6 @@ sub Admin_Disable {
             push @sorted_players, $_;
         }
     }
-
     if ( scalar @sorted_players == 0 ) {
 		print "ERROR: No Active players. What kind of tournament are you running?\n";
         return;
@@ -851,18 +857,22 @@ sub Admin_Disable {
 	}
 
 	print $Player . " has been DEREZED.\n";
-	print $Player . "'s previosu oppoment Will be matched with BYE, or player who was previosuly matched with BYE.\n";
+	print $Player . "'s previous opponent Will be matched with BYE, or player who was previosuly matched with BYE.\n";
 	$player_data->{$Player}->{status} = 'Disabled';
 
-	if ( ((scalar @sorted_players) - 1) % 2 == 1 ) {
-		my $Opponent = $player_data->{$Player}->{opponents}[$score_round];
+	my $Opponent = $player_data->{$Player}->{opponents}[$score_round];
+	if ( (scalar @sorted_players) % 2 == 1 ) {
+	# Odd Number of players remain in the tournament, Match Previous opponent with BYE
 		$player_data->{$Opponent}->{opponents}[$score_round] = 'BYE';
 		$player_data->{$Opponent}->{prestige}[$score_round] = '4';
 	}
 	else {
-		$player_data->{$Player}->{opponents}[$score_round] = undef;
-		$player_data->{$Player}->{prestige}[$score_round] = undef;
+		# Even Number or players.  Find the previous BYE matching and replace
+		#TODO Match with previous BYE Opponent
 	}
+	# Remove the disabled players Current Opponent, and set prestige to 0 
+	$player_data->{$Player}->{opponents}[$score_round] = 'N/A';
+	$player_data->{$Player}->{prestige}[$score_round] = 0;
 
 	return 0;
 }
@@ -916,5 +926,3 @@ sub Admin_Enable {
 	}
 	return 0;
 }
-
-

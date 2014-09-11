@@ -28,3 +28,6 @@
 
   * FEATURE: Can now add a player mid tournament. They will be paired with the
   BYE player or the player who was paired with the BYE.
+
+  * BUG: bug with adding / disabling the added player causing a crash has
+  been fixed.
