@@ -791,6 +791,37 @@ sub Admin_Pairing {
 }
 
 sub Admin_Add {
+	my $term = Term::ReadLine->new('new');
+	my $new_player = $term->readline("New Player Name (Enter to Cancel):");
+	if ($new_player eq '') {
+		return 0;
+	}
+	if (scalar keys $player_data %2 == 1) {
+		for (keys $player_data) {
+			if ( $player_data->{$_}->{opponents}[$score_round] eq 'BYE'){
+				$player_data->{$_}->{opponents}[$score_round] = $new_player;
+				$player_data->{$_}->{prestige}[$score_round] = undef;
+
+				$player_data->{$new_player} = {
+					opponents => [('N/A', ) x $score_round],
+					prestige  => [ ( 0, ) x $score_round ],
+					status    => 'Active',
+		        };
+		        $player_data->{$new_player}->{opponents}[$score_round] = $_;
+				$player_data->{$new_player}->{prestige}[$score_round] = undef;
+				last;
+			}
+		}
+	}
+	else {
+		$player_data->{$new_player} = {
+			opponents => [('N/A', ) x $score_round],
+			prestige  => [ ( 0, ) x $score_round ],
+			status    => 'Active',
+		};
+		$player_data->{$new_player}->{opponents}[$score_round] = 'BYE';
+		$player_data->{$new_player}->{prestige}[$score_round] = 4;
+	}
 
 }
 

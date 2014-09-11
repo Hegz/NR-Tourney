@@ -100,11 +100,10 @@ The appropriate prestige result will be entered for the player, and their oppone
 To Do
 -----
 
-There are still some bugs to resolve, and a few features to add to improve program flow including:
-
+Search through for bugs, and repair as necessary.  Clean up some variable names, Document the code, and run it through perl tidy.
 
 #### Known Bugs
   * Nothing at this time, But don't place too much trust in me.
 
 #### Features
-  * Add Player to the Tournament
+  * This is now Feature Complete for a 1.0 release.

@@ -25,3 +25,6 @@
   * FEATURE: Added the ability to override prestige values.
 
   * FEATURE: Added the ability to manually set round pairings.
+
+  * FEATURE: Can now add a player mid tournament. They will be paired with the
+  BYE player or the player who was paired with the BYE.
