@@ -15,6 +15,7 @@
 use strict;
 use warnings;
 use utf8;
+no warnings qw(experimental);
 use 5.14.0;
 use YAML::XS qw(DumpFile LoadFile);
 use Term::UI;
@@ -23,7 +24,7 @@ use Getopt::Std;
 use Perl6::Form;
 use List::MoreUtils qw(firstidx);
 use Scalar::Util qw(looks_like_number);
-my $DEBUG = 0;
+my $DEBUG = 1;
 
 # Set file name to work from
 my %opts;
@@ -148,7 +149,7 @@ sub Make_Pairing {
                             # Fail this pair up.
                             $nomatch = 1;
                         }
-                    }
+                     }
                 }
                 else {
                     # End of list and no match found.
@@ -159,7 +160,7 @@ sub Make_Pairing {
                     $nomatch = 0;
                     $BYE     = 1;
                 }
-                sleep 1;
+                 sleep 1 if $DEBUG;
             } while ($nomatch);
             if ($BYE) {
                 print STDERR "DEBUG: Finalizing BYE for " . $player . ".\n"
@@ -177,8 +178,8 @@ sub Make_Pairing {
                   $Players[$opponent];
                 push @{ $player_data->{ $Players[$opponent] }->{opponents} },
                   $player;
-            }
-        }
+             }
+         }
     }
     DumpFile( $opts{f} . ".yml", $player_data );
     return 0;
@@ -255,9 +256,12 @@ sub View_Standings {
         }
         my $opponents;
         for my $opp ( @{ $player_data->{$player}->{opponents} } ) {
-            my $standing = firstidx { $_ eq "$opp" } @Players;
-            $standing++;
-            $opponents = $opponents . sprintf( "%-" . ($spacer) . "s ", $opp );
+            my $standing = firstidx { $_ eq "$opp" } @{ $player_data->{$player}->{opponents} };
+			my $round_prestige = '';
+			if ( defined $player_data->{$player}->{prestige}[$standing] ) {
+				$round_prestige = $player_data->{$player}->{prestige}[$standing];
+			}
+            $opponents = $opponents . sprintf( "%-" . ($spacer + 3) . "s ", "[". $round_prestige . "]" .  $opp );
         }
 
         print form "  {>>>} {<{"
@@ -359,10 +363,7 @@ sub Score_Data {
          print "No More players to score for round "
           . ( $score_round + 1 ) . ".\n";
 		if ( ($score_round + 1) < $total_rounds ){
-			print "\n\n--== Advancing to round " 
-              . ( $score_round + 2 ) . " of "
-			  . $total_rounds . "==--\n\n";
-			Select_round();
+			print "\n\n--== Advancing the round to continue ==--\n\n"; 
 		}
 		else {
 			View_Standings();
