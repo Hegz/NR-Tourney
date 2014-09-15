@@ -24,7 +24,7 @@ use Getopt::Std;
 use Perl6::Form;
 use List::MoreUtils qw(firstidx);
 use Scalar::Util qw(looks_like_number);
-my $DEBUG = 0;
+my $DEBUG = 1;
 
 # Set file name to work from
 my %opts;
@@ -139,6 +139,7 @@ sub Make_Pairing {
         sum( @{ $player_data->{$b}->{prestige} } )
           <=> sum( @{ $player_data->{$a}->{prestige} } )
     } keys $player_data;
+	print STDERR "DEBUG: Sorted list of players.\n" if $DEBUG;
     if ($DEBUG) {
         for my $i ( 0 .. $#Players ) {
             print STDERR "DEBUG: $i. " . $Players[$i] . "\n";
@@ -148,10 +149,11 @@ sub Make_Pairing {
     for my $i ( 0 .. $#Players ) {
 	# Match the top player with the next valid player in the list.
         my $player = $Players[$i];
+		print STDERR "DEBUG: Beginning matching with player: $player rank: $i.\n" if $DEBUG;
 
         unless ( defined $player_data->{$player}->{opponents}[$score_round] || $player_data->{$player}->{status} eq 'Disabled') {
 		# Filter out players that have a match, and disabled players
-            print STDERR "DEBUG: $i " . $player . ".\n" if $DEBUG;
+            print STDERR "DEBUG: Player dosn't have a current match\n" if $DEBUG;
             print STDERR "DEBUG:    previous opponents: @{$player_data->{$player}->{opponents}}\n" if $DEBUG;
             my $opponent = $i; # Index for the player in the @Players array
             my $nomatch  = 0;  # valid matching
