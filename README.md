@@ -22,7 +22,6 @@ Requirements
 The following Perl modules will need to be installed if they aren't already
 
 YAML::XS  
-Term::UI  
 Perl6::Form  
 List::MoreUtils   
 

@@ -24,7 +24,7 @@ use Getopt::Std;
 use Perl6::Form;
 use List::MoreUtils qw(firstidx);
 use Scalar::Util qw(looks_like_number);
-my $DEBUG = 1;
+my $DEBUG = 0;
 
 # Set file name to work from
 my %opts;
@@ -36,7 +36,6 @@ my $data_file = $opts{'f'} . ".yml";
 my $score_round;
 my $player_data;
 my $total_rounds;
-my $matchups_shown;
 
 unless ( -e $data_file ) {
     Load_Player_data();
@@ -91,7 +90,7 @@ Save_File();
 
 exit 0;
 
-# End of main program
+# End of main 
 
 sub Save_File {
 	# Save data to file
@@ -100,7 +99,6 @@ sub Save_File {
 		total_rounds => $total_rounds,
 	};
 	DumpFile( $opts{f} . ".yml", $player_data );
-
 	delete $player_data->{BYE};
 	delete $player_data->{META};
 }
@@ -108,16 +106,19 @@ sub Save_File {
 sub Select_round {
 # Advance the round and set pairings.
 	# Check to see that all current round data has been scored.
-	my $Advance_Okay = 1;
 	for (keys $player_data) {
 		unless (defined $player_data->{$_}->{prestige}[$score_round]){
 			print "\nERROR: Missing Score data for round " . ($score_round + 1) ." Unable to advance\n\n";
 			return 0;
 		}
 	}
+	#Check to see if is already the last round
+	if (($score_round + 1) eq $total_rounds) {
+		print "\nERROR: Already at the last round.\n\n";
+		return 0;
+	}
     $score_round++;
     Make_Pairing();
-	$matchups_shown = undef;
     return 0;
 }
 
@@ -150,7 +151,9 @@ sub Make_Pairing {
 	# Match the top player with the next valid player in the list.
         my $player = $Players[$i];
 		print STDERR "DEBUG: Beginning matching with player: $player rank: $i.\n" if $DEBUG;
-
+		if ($player_data->{$player}->{status} eq 'Disabled') {
+			$player_data->{$player}->{opponents}[$score_round] = 'N/A';
+		}
         unless ( defined $player_data->{$player}->{opponents}[$score_round] || $player_data->{$player}->{status} eq 'Disabled') {
 		# Filter out players that have a match, and disabled players
             print STDERR "DEBUG: Player dosn't have a current match\n" if $DEBUG;
@@ -165,16 +168,23 @@ sub Make_Pairing {
                 $nomatch = 0;
                 if ( defined $Players[$opponent] && $player_data->{$Players[$opponent]}->{status} ne 'Disabled') {
 				# Ensure the next player in the list is defined, Active
-                    print STDERR "DEBUG:   ->  checking $opponent " . $Players[$opponent] . "\n" if $DEBUG;
-                    for ( @{ $player_data->{$player}->{opponents} } ) {
-					# Check the players previous opponents. 
-                        if ( $_ eq $Players[$opponent] ) {
-						# This matching took place in a previous round.
-                            print STDERR "DEBUG:    -> $_ Not a valid match.\n" if $DEBUG;
-                            $nomatch = 1;
-                        }
-                     }
-                }
+					if ( defined $player_data->{$Players[$opponent]}->{opponents}[$score_round] ) {
+						# Check to ensure opponent doesn't have existing match data;
+						print STDERR "DEGUG: Proposed opponent $Players[$opponent] has existing match data\n";
+						$nomatch = 1;
+					}
+					unless ($nomatch) {
+						print STDERR "DEBUG:   ->  checking $opponent " . $Players[$opponent] . "\n" if $DEBUG;
+						for ( @{ $player_data->{$player}->{opponents} } ) {
+						# Check the players previous opponents. 
+							if ( $_ eq $Players[$opponent] ) {
+							# This matching took place in a previous round.
+								print STDERR "DEBUG:    -> $_ Not a valid match.\n" if $DEBUG;
+								$nomatch = 1;
+							}
+						 }
+					}
+				}
                 else {
                 # End of list of players and no valid match match found
                     print STDERR "DEBUG: No Match found, " . $player . " is matched with BYE.\n" if $DEBUG;
@@ -214,25 +224,28 @@ sub Show_Matchups {
     for ( keys $player_data ) {
         $spacer = length if length > $spacer;
     }
-    $spacer += 5;
 
-    print "Round " . ($score_round + 1) . " Pairings\n";
+	my $format = "{>>>} {<{" . $spacer . "}<} {><<} {<{" . $spacer . "}<}";
+    print "Round " . ($score_round + 1) . " Pairings\n\n";
 
+	print form $format, 'Table', 'Player', ' ', 'Player';
+	my $index = 1;
     for ( sort keys %matchups ) {
         if ( defined $matchups{$_} ) {
-            print sprintf( "%-${spacer}s %-5s %-${spacer}s \n",
-                $_, '->', $matchups{$_} );
+			my $table = $index++ . '.';
+			$table = ' ' if $matchups{$_} eq 'BYE';
+			print form $format, $table, $_, '<->', $matchups{$_};
             delete $matchups{ $matchups{$_} };
         }
     }
     print "\n";
-	$matchups_shown = 1;
     return 0;
 }
 
 sub View_Standings {
 	# Print the current standings for the tournament
-	#
+
+	# Sort the players on Prestige, then Strength of Schedule
     my @temp =
       map { [ sum( @{ $player_data->{$_}->{prestige} } ), $_ ] }
       keys $player_data;
@@ -245,10 +258,10 @@ sub View_Standings {
         }
         push $_, $Sos;
     }
-
     my @Sorted_Players =
       map { $_->[1] } sort { $b->[0] <=> $a->[0] || $b->[2] <=> $a->[2] } @temp;
 
+	# Determine the required field width for names
     my $spacer = 0;
     for ( keys $player_data ) {
         $spacer = length if length > $spacer;
@@ -259,14 +272,14 @@ sub View_Standings {
 	my @header = ('Rank', 'Player name', 'Prestige', 'SoS');
 	
 	for (1 .. ($score_round + 1)) {
-		$format = $format . " {<{". ($spacer) . "}<}";
+		$format = $format . " {<{". ($spacer + 4) . "}<}";
 		push @header, " Round " . $_;
 	}
 
 	# Print Header
 	print form $format,@header;
 
-	# Populate form data lines
+	# Populate & print form data line
 	my $Rank = 0;
 	for my $player (@Sorted_Players) {
 		my @Print_Line;
@@ -292,6 +305,7 @@ sub View_Standings {
             $Sos += sum( @{ $player_data->{$_}->{prestige} } )
               unless $_ eq 'BYE' || $_ eq 'N/A';
         }
+		$Sos = 0 unless defined $Sos;
 		push @Print_Line, $Sos;
 
 		# Add Round Results and Opponents
@@ -310,6 +324,7 @@ sub View_Standings {
 }
 
 sub Load_Player_data {
+# Load in the initial list of players and generate initial pairings
 
     # Load Players
     open( my $fh_players, "<", $opts{'f'} . ".txt" ) or die "$!";
@@ -365,26 +380,17 @@ sub Load_Player_data {
             $player_data->{$player2}->{prestige}[0] = 4;
         }
 
-         print STDERR "DEBUG:" . scalar @players . " remaining.\n" if $DEBUG;
+         print STDERR "DEBUG:" . scalar @players . " remaining to match.\n" if $DEBUG;
     } while ( scalar @players > 0 );
 
     $score_round  = 0;
     $total_rounds = $rounds;
 
-    $player_data->{'META'} = {
-        score_round  => 0,
-        total_rounds => $rounds,
-    };
     return 0;
 }
 
 sub Score_Data {
 
-	# Prevent accidental scores from being entered
-	unless (defined $matchups_shown) {
-		print "\nERROR: You cannot add score data without valid matchups.\n";
-		return 0;
-	}
 
     # Filter out players with score data for this round
     my @sorted_players;
@@ -397,12 +403,6 @@ sub Score_Data {
     if ( scalar @sorted_players == 0 ) {
          print "No More players to score for round "
           . ( $score_round + 1 ) . ".\n";
-		if ( ($score_round + 1) < $total_rounds ){
-			print "\n\n--== Advancing the round to continue ==--\n\n"; 
-		}
-		else {
-			View_Standings();
-		}
         return;
     }
 
@@ -419,25 +419,19 @@ sub Score_Data {
 	}
 
     my $Player2 = $player_data->{$Player}->{opponents}[$score_round];
-    print "Scoring game vs $Player2\n";
+    print "\nScoring match vs $Player2\n";
 
     # valid scoring options as of Aug, 2014
     my @score_options = (
         'Won both games',
         'Won and Lost',
-        'Won Game 1 and Timeout w/ AP lead',
-        'Won Game 1 and Timeout w/ AP Tie',
-        'Won Game 1 and Timeout w/ AP Deficit',
-        'Lost Game 1 and Timeout w/ AP Lead',
-        'Lost Game 1 and Timeout w/ AP Tie',
-        'Lost Game 1 and Timeout w/ AP Deficit',
-        'Timeout first game w/ AP Lead',
-        'Timeout first game w/ AP Tie',
-        'Timeout first game w/ AP Deficit',
-        'Lost both games'
+        'Won Game and Timeout',
+        'Lost Game and Timeout',
+        'Timeout on first game',
+        'Lost both games',
+		'Return'
     );
 
-	push @score_options, 'Return';
     # Prompt for Score
     my $score = $term->get_reply(
         prompt  => 'Match Result',
@@ -447,78 +441,76 @@ sub Score_Data {
 	if ($score eq $score_options[-1]) {
 		return 0;
 	}
+	my $Player1_Timeout_Mod = 0;
+	my $Player2_Timeout_Mod = 0;
+	if ($score =~ m/Timeout/) {
+		# if there was a timeout, check for Lead Tie or Deficit
+		my @timeout = (
+			'Agenda Point Lead',
+			'Agenda Point Tie',
+			'Agenda Point Deficit',
+			'Return'
+		);
+		my $timeout_result = $term->get_reply(
+			prompt => 'Timout Result',
+			choices => \@timeout,
+			default => $timeout[-1],
+		);
+		if ($timeout_result eq $timeout[-1]) {
+			return 0;
+		}
+		for ($timeout_result) {
+			no warnings qw(experimental);
+			when ($timeout_result eq $timeout[0]) {
+				$Player1_Timeout_Mod = 1;
+			}
+			when ($timeout_result eq $timeout[1]) {
+				$Player1_Timeout_Mod = 1;
+				$Player2_Timeout_Mod = 1;
+			}
+			when ($timeout_result eq $timeout[2]) {
+				$Player2_Timeout_Mod = 1;
+			}
+		}
+	}
 
     for ($score) {
         no warnings qw(experimental);
         when ( $score eq $score_options[0] ) {
-
             # Won both Games
+
             $player_data->{$Player}->{prestige}[$score_round]  = 4;
             $player_data->{$Player2}->{prestige}[$score_round] = 0;
         }
         when ( $score eq $score_options[1] ) {
-
             # Split games
+
             $player_data->{$Player}->{prestige}[$score_round]  = 2;
             $player_data->{$Player2}->{prestige}[$score_round] = 2;
         }
         when ( $score eq $score_options[2] ) {
+            # Won Game 1 and timeout 
 
-            # Won Game 1 and timeout Game 2 with agenda point lead.
-            $player_data->{$Player}->{prestige}[$score_round]  = 3;
-            $player_data->{$Player2}->{prestige}[$score_round] = 0;
+            $player_data->{$Player}->{prestige}[$score_round]  = 2 + $Player1_Timeout_Mod;
+            $player_data->{$Player2}->{prestige}[$score_round] = 0 + $Player2_Timeout_Mod;
+
         }
         when ( $score eq $score_options[3] ) {
+            # Lost Game 1 and timeout
 
-            # Won Game 1 and timeout Game 2 with agenda point Tie
-            $player_data->{$Player}->{prestige}[$score_round]  = 3;
-            $player_data->{$Player2}->{prestige}[$score_round] = 1;
+            $player_data->{$Player}->{prestige}[$score_round]  = 0 + $Player1_Timeout_Mod;
+            $player_data->{$Player2}->{prestige}[$score_round] = 2 + $Player2_Timeout_Mod;
         }
         when ( $score eq $score_options[4] ) {
+            # Timeout first game
 
-            # Won Game 1 and timeout Game 2 with agenda point deficit
-            $player_data->{$Player}->{prestige}[$score_round]  = 2;
-            $player_data->{$Player2}->{prestige}[$score_round] = 1;
+            $player_data->{$Player}->{prestige}[$score_round]  = 0 + $Player1_Timeout_Mod;
+            $player_data->{$Player2}->{prestige}[$score_round] = 0 + $Player2_Timeout_Mod;
         }
+        
         when ( $score eq $score_options[5] ) {
-
-            # Lost game and timeout with Agenda point lead
-            $player_data->{$Player}->{prestige}[$score_round]  = 1;
-            $player_data->{$Player2}->{prestige}[$score_round] = 2;
-        }
-        when ( $score eq $score_options[6] ) {
-
-            # Lost game and timeout with Agenda point Tie
-            $player_data->{$Player}->{prestige}[$score_round]  = 1;
-            $player_data->{$Player2}->{prestige}[$score_round] = 3;
-        }
-        when ( $score eq $score_options[7] ) {
-
-            # Lost Game 1 and timeout Game 2 with agenda point deficit
-            $player_data->{$Player}->{prestige}[$score_round]  = 0;
-            $player_data->{$Player2}->{prestige}[$score_round] = 3;
-        }
-        when ( $score eq $score_options[8] ) {
-
-            # Timeout Game 1 with agenda point lead.
-            $player_data->{$Player}->{prestige}[$score_round]  = 1;
-            $player_data->{$Player2}->{prestige}[$score_round] = 0;
-        }
-        when ( $score eq $score_options[9] ) {
-
-            # Timeout Game 1 with agenda point tie.
-            $player_data->{$Player}->{prestige}[$score_round]  = 1;
-            $player_data->{$Player2}->{prestige}[$score_round] = 1;
-        }
-        when ( $score eq $score_options[10] ) {
-
-            # Timeout Game 1 with agenda point deficit
-            $player_data->{$Player}->{prestige}[$score_round]  = 0;
-            $player_data->{$Player2}->{prestige}[$score_round] = 1;
-        }
-        when ( $score eq $score_options[11] ) {
-
             # Lost both Games
+
             $player_data->{$Player}->{prestige}[$score_round]  = 0;
             $player_data->{$Player2}->{prestige}[$score_round] = 4;
         }
@@ -904,7 +896,15 @@ sub Admin_Disable {
 	}
 	else {
 		# Even Number or players.  Find the previous BYE matching and replace
-		#TODO Match with previous BYE Opponent
+		for (keys $player_data) {
+			if ($player_data->{$_}->{opponents}[$score_round] eq 'BYE') {
+				$player_data->{$_}->{opponents}[$score_round] = $Opponent;
+				$player_data->{$_}->{prestige}[$score_round] = undef;
+				$player_data->{$Opponent}->{opponents}[$score_round] = $_;
+				$player_data->{$Opponent}->{prestige}[$score_round] = undef;
+				last;
+			}
+		}
 	}
 	# Remove the disabled players Current Opponent, and set prestige to 0 
 	$player_data->{$Player}->{opponents}[$score_round] = 'N/A';
