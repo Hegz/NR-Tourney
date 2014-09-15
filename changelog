@@ -31,3 +31,10 @@
 
   * BUG: bug with adding / disabling the added player causing a crash has
   been fixed.
+
+2014/09/13
+
+  * BUG: removed some debug code that was causing a slowdown in pairing
+  generation.
+
+  * BUG: Fixed an error that was causing slowdown in the results view.

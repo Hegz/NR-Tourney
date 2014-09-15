@@ -1,0 +1,75 @@
+<!DOCTYPE HTML>
+<html>
+    <head>
+        <script type="text/javascript" src="inc/jquery-2.1.0.min.js"></script>
+        <link rel="stylesheet" href="inc/bootstrap.min.css" />
+        <script type="text/javascript" src="inc/TimeCircles.js"></script>
+        <link rel="stylesheet" href="inc/TimeCircles.css" />
+		<link rel="stylesheet" type="text/css" href="inc/styles.css" />
+    </head>
+    <body>
+        <div class="container">
+            <h1>Back in an Hour</h1>
+            <div id="CountDownTimer" data-timer="3600" style="width: 25em; height: 25em;" class="left"></div>
+			<div id="Expired" class="expired" style="display:none;">We're Back</div>
+            <button class="btn btn-success startTimer">Start Timer</button>
+            <button class="btn btn-success restartTimer">Restart Timer</button>
+            <button class="btn btn-danger stopTimer">Stop Timer</button>
+        </div>
+		<script>
+            $(   "#CountDownTimer").TimeCircles({ 
+			//Load the Countdown Timer Min and Sec with a Max time of 3900 seconds (65min)
+				count_past_zero: false, 
+				total_duration: 3600, 
+				time: { 
+					Days: { show: false }, 
+					Hours: { show: false }
+				}
+			});
+            
+            // Start and stop are methods applied on the public TimeCircles instance
+            $(".startTimer").click(function() {
+                $("#CountDownTimer").TimeCircles().start();
+            });
+            $(".stopTimer").click(function() {
+                $("#CountDownTimer").TimeCircles().stop();
+            });
+            $(".restartTimer").click(function() {
+                $("#CountDownTimer").TimeCircles().restart();
+				$("#CountDownTimer").fadeIn();
+				$("#CountDownTimer").css('opacity','100');
+				$(".expired").fadeOut();
+				$(".expired").css('opacity','0');
+            });
+
+
+			function EndRound( unit, value, total ) {
+			// At end of round, load the Expired text play alarm, and Hide Timers
+				if ( total <= 0 ) {
+					$(".expired").fadeIn();
+					$(".expired").css('opacity','100');
+					$("#CountDownTimer").fadeOut();
+					$("#CountDownTimer").css('opacity','0');
+//					audioElement.play();
+				};
+			};
+
+// Uncomment the follwing to add an audio alert at the end of the countdown
+//			var audioElement = document.createElement('audio');
+//			$(document).ready(function() {
+//			// Load the end of round alert sound
+//				audioElement.setAttribute('src', 'Assets/Alert.mp3');
+//				audioElement.setAttribute('preload','auto');
+//				audioElement.load()
+//				
+//				$.get();
+//				
+//				audioElement.addEventListener("load", function() {
+//				    audioElement.play();
+//				}, true);
+//				});
+
+            $("#CountDownTimer").TimeCircles().addListener(EndRound, type = "visible");
+        </script>       
+    </body>
+</html>

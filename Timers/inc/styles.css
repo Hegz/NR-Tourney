@@ -1,0 +1,67 @@
+		body {
+			/*Add a background image to the timers here*/
+			/*background-image:url('../Assets/Ash_2X3ZB9CY.jpg');*/
+			background-color:#000000;
+			background-repeat:no-repeat;
+			background-attachment:fixed;
+			background-position:center; 
+		}
+		.center {
+			margin:auto;
+			width:50%;
+			padding-top: -1em;
+			text-align: center;
+			color: white;
+			font-family: "cyberpunk is not dead";
+		}
+		.left {
+			margin:auto;
+			color: white;
+			font-family: "cyberpunk is not dead";
+		}
+		h1 {
+			color: Darkred;
+			text-align: center;
+			font-size:2.5em;
+			padding-top: 0em;
+			padding-bottom: -2em;
+			font-family: "cyberpunk is not dead";
+		}
+		h2 {
+			text-align: center;
+			padding-top: 1em;
+			padding-bottom: 1em;
+			font-family: "cyberpunk is not dead";
+			color: red;
+			background-color : black;
+			border-style: solid;
+			border-width: 3px;
+			border-left-width: 10px;
+			border-right-width: 10px;
+			border-color: red;
+		}
+		@font-face {
+			font-family: "cyberpunk is not dead";
+			src: url(../Assets/CyberpunkIsNotDead_ANR.ttf);
+		}
+		table {
+			margin-left:auto; 
+			margin-right:auto;
+		}
+		p.b {
+			color: white;
+		}
+		.expired {
+			position:absolute;
+			left:9%;
+			top:35%;
+			z-index:+1;
+			font-family: "cyberpunk is not dead";
+			font-size: 10em;
+			text-align: center;
+			text-decoration: underline;
+			font-weight: bolder;
+			transform:rotate(345deg);
+			color: red;
+			text-shadow: 5px 5px #000000;
+		}

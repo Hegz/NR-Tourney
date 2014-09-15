@@ -103,6 +103,7 @@ To Do
 Search through for bugs, and repair as necessary.  Clean up some variable names, Document the code, and run it through perl tidy.
 
 #### Known Bugs
+  * There is a serious bug in the pairing generation that under some circumstances can cause players to be matched with 2 opponents, and/or a BYE player being added or removed.
 
 #### Features
   * This is now Feature Complete for a 1.0 release.
