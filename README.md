@@ -33,7 +33,7 @@ Create a text file and add your players, 1 per line.  There is an example (playe
 
 Run the program with the command:  
 ```
-score.pl -f players_list.txt
+score.pl players_list.txt
 ```
 where players_list.txt is the name of the text file containing the players.
 
@@ -102,7 +102,7 @@ To Do
 Search through for bugs, and repair as necessary.  Clean up some variable names, Document the code, and run it through perl tidy.
 
 #### Known Bugs
-  * There is a serious bug in the pairing generation that under some circumstances can cause players to be matched with 2 opponents, and/or a BYE player being added or removed.
+  * New Players are mis assigned opponents when added after the start, when disabled players exist.
 
 #### Features
   * This is now Feature Complete for a 1.0 release.

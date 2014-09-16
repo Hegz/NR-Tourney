@@ -20,19 +20,14 @@ use 5.14.0;
 use YAML::XS qw(DumpFile LoadFile);
 use Term::UI;
 use Term::ReadLine;
-use Getopt::Std;
 use Perl6::Form;
 use List::MoreUtils qw(firstidx);
 use Scalar::Util qw(looks_like_number);
-my $DEBUG = 0;
 
-# Set file name to work from
-my %opts;
-getopts( 'f:', \%opts );
+my $Players_File = $ARGV[0];
+$Players_File =~ s/(.*)\..{0,3}/$1/;
 
-$opts{'f'} =~ s/(.*).txt$/$1/x;
-
-my $data_file = $opts{'f'} . ".yml";
+my $data_file = $Players_File . ".yml";
 my $score_round;
 my $player_data;
 my $total_rounds;
@@ -98,7 +93,7 @@ sub Save_File {
 		score_round  => $score_round,
 		total_rounds => $total_rounds,
 	};
-	DumpFile( $opts{f} . ".yml", $player_data );
+	DumpFile( $Players_File . ".yml", $player_data );
 	delete $player_data->{BYE};
 	delete $player_data->{META};
 }
@@ -140,24 +135,15 @@ sub Make_Pairing {
         sum( @{ $player_data->{$b}->{prestige} } )
           <=> sum( @{ $player_data->{$a}->{prestige} } )
     } keys $player_data;
-	print STDERR "DEBUG: Sorted list of players.\n" if $DEBUG;
-    if ($DEBUG) {
-        for my $i ( 0 .. $#Players ) {
-            print STDERR "DEBUG: $i. " . $Players[$i] . "\n";
-        }
-    }
 
     for my $i ( 0 .. $#Players ) {
 	# Match the top player with the next valid player in the list.
         my $player = $Players[$i];
-		print STDERR "DEBUG: Beginning matching with player: $player rank: $i.\n" if $DEBUG;
 		if ($player_data->{$player}->{status} eq 'Disabled') {
 			$player_data->{$player}->{opponents}[$score_round] = 'N/A';
 		}
         unless ( defined $player_data->{$player}->{opponents}[$score_round] || $player_data->{$player}->{status} eq 'Disabled') {
 		# Filter out players that have a match, and disabled players
-            print STDERR "DEBUG: Player dosn't have a current match\n" if $DEBUG;
-            print STDERR "DEBUG:    previous opponents: @{$player_data->{$player}->{opponents}}\n" if $DEBUG;
             my $opponent = $i; # Index for the player in the @Players array
             my $nomatch  = 0;  # valid matching
             my $BYE;           # Player will be paired with BYE
@@ -170,16 +156,13 @@ sub Make_Pairing {
 				# Ensure the next player in the list is defined, Active
 					if ( defined $player_data->{$Players[$opponent]}->{opponents}[$score_round] ) {
 						# Check to ensure opponent doesn't have existing match data;
-						print STDERR "DEGUG: Proposed opponent $Players[$opponent] has existing match data\n";
 						$nomatch = 1;
 					}
 					unless ($nomatch) {
-						print STDERR "DEBUG:   ->  checking $opponent " . $Players[$opponent] . "\n" if $DEBUG;
 						for ( @{ $player_data->{$player}->{opponents} } ) {
 						# Check the players previous opponents. 
 							if ( $_ eq $Players[$opponent] ) {
 							# This matching took place in a previous round.
-								print STDERR "DEBUG:    -> $_ Not a valid match.\n" if $DEBUG;
 								$nomatch = 1;
 							}
 						 }
@@ -187,22 +170,18 @@ sub Make_Pairing {
 				}
                 else {
                 # End of list of players and no valid match match found
-                    print STDERR "DEBUG: No Match found, " . $player . " is matched with BYE.\n" if $DEBUG;
                     $nomatch = 0;
                     $BYE     = 1;
                 }
-                 sleep 1 if $DEBUG;
             } while ($nomatch); # Check next opponent if match failed.
 
             if ($BYE) {
 			# Set the matching and prestige for the BYE
-                print STDERR "DEBUG: Finalizing BYE for " . $player . ".\n" if $DEBUG;
                 push @{ $player_data->{$player}->{opponents} }, 'BYE';
                 $player_data->{$player}->{prestige}[$score_round] = 4;
             }
             else {
 			# Match player with the selected opponent, match opponent with player
-                print STDERR "DEBUG: Finalizing match of " . $Players[$opponent] . " With " . $player . ".\n" if $DEBUG;
                 push @{ $player_data->{$player}->{opponents} },
                   $Players[$opponent];
                 push @{ $player_data->{ $Players[$opponent] }->{opponents} },
@@ -217,7 +196,9 @@ sub Make_Pairing {
 sub Show_Matchups {
     my %matchups;
     for ( keys $player_data ) {
-        $matchups{$_} = $player_data->{$_}->{opponents}[$score_round];
+		unless ($player_data->{$_}->{status} eq 'Disabled') {
+	        $matchups{$_} = $player_data->{$_}->{opponents}[$score_round];
+		}
     }
 
     my $spacer = 0;
@@ -230,14 +211,21 @@ sub Show_Matchups {
 
 	print form $format, 'Table', 'Player', ' ', 'Player';
 	my $index = 1;
+	my $BYE;
     for ( sort keys %matchups ) {
         if ( defined $matchups{$_} ) {
+			if ($matchups{$_} eq 'BYE') {
+				$BYE = $_;
+				next;
+			}
 			my $table = $index++ . '.';
-			$table = ' ' if $matchups{$_} eq 'BYE';
 			print form $format, $table, $_, '<->', $matchups{$_};
             delete $matchups{ $matchups{$_} };
         }
     }
+	if (defined $BYE) {
+		print form $format, ' ', $BYE, '<->', 'BYE';
+	}
     print "\n";
     return 0;
 }
@@ -327,14 +315,12 @@ sub Load_Player_data {
 # Load in the initial list of players and generate initial pairings
 
     # Load Players
-    open( my $fh_players, "<", $opts{'f'} . ".txt" ) or die "$!";
+    open( my $fh_players, "<", $ARGV[0] ) or die "$!";
     chomp( my @players = <$fh_players> );
     close $fh_players;
-    print STDERR "DEBUG: Loaded " . scalar @players . " Players.\n" if $DEBUG;
 
     # Add Bye if needed
     if ( scalar @players % 2 == 1 ) {
-        print STDERR "DEBUG: Adding BYE Player.\n" if $DEBUG;
         push @players, "BYE";
     }
 
@@ -348,7 +334,6 @@ sub Load_Player_data {
         $rounds = 3 when $_ >= 5;
         $rounds = 2 when $_ >= 2;
     }
-    print STDERR "DEBUG:" . $rounds . " rounds needed.\n" if $DEBUG;
 
     # Generate Pairings at random
     do {
@@ -368,19 +353,12 @@ sub Load_Player_data {
         };
 
         if ( $player2 eq 'BYE' ) {
-            print STDERR
-              "DEBUG: adding prestige for BYE player opponent: $player1.\n"
-              if $DEBUG;
             $player_data->{$player1}->{prestige}[0] = 4;
         }
         elsif ( $player1 eq 'BYE' ) {
-            print STDERR
-              "DEBUG: adding prestige for BYE player opponent: $player2.\n"
-              if $DEBUG;
             $player_data->{$player2}->{prestige}[0] = 4;
         }
 
-         print STDERR "DEBUG:" . scalar @players . " remaining to match.\n" if $DEBUG;
     } while ( scalar @players > 0 );
 
     $score_round  = 0;
@@ -728,7 +706,7 @@ sub Admin_Pairing {
 	for (1 .. $total_rounds) {
 		$format = $format . " {<{" . ($spacer) . "}<}";
 		push @header, " Round " . $_;
-		push @rounds, "Round " . ($_ - 1);
+		push @rounds, "Round " . $_;
 	}
 	print "\n ";
 	print form $format, @header;
@@ -760,10 +738,12 @@ sub Admin_Pairing {
 		return 0;
 	}
 
-	my $selected_round = $rounds[ firstidx { $_ eq $round } @menu];
+	my @Match_Rounds = (0 .. $total_rounds);
+	my $selected_round = $Match_Rounds[ firstidx { $_ eq $round } @rounds];
 
 	$format = "{<{" . ($spacer) . "}<}   {<{" . ($spacer) . "}<}"; 
-	my $title = print form $format, 'Player', 'Opponent';
+	my $title = form $format, 'Player', 'Opponent';
+	chomp $title;
 	my @round_match;
 	do {
 		my @players;
@@ -778,12 +758,13 @@ sub Admin_Pairing {
 			}
 			push @round_match, (form $format, @data);
 		}
+		chomp @round_match;
 		push @round_match, "Clear All Pairings", "Return";
 		my $round = $term->get_reply(
-			prompt  => 'Choose round',
+			prompt  => 'Choose pairing',
 			choices => \@round_match,
 			default  => $round_match[-1],
-			print_me => "\nEdit pairing data for which round?",
+			print_me => "     " . $title,
 		);
 
 		my $selected_player = $players[ firstidx { $_ eq $round } @rounds];
@@ -824,6 +805,7 @@ sub Admin_Add {
 	if ($new_player eq '') {
 		return 0;
 	}
+# TODO Players are mis assigned when disabled players exist.
 	if ((scalar (keys $player_data)) % 2 == 1) {
 		for (keys $player_data) {
 			if ( $player_data->{$_}->{opponents}[$score_round] eq 'BYE'){

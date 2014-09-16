@@ -1,10 +1,22 @@
+2014/09/16
+
+  * Change: Removed dependency on GetOpt:Std, and changed startup syntax.
+
+  * Change: Removed debug messages from code.
+
+  * Change: BYE matchup always at the bottom of match list.
+
+  * BUG: Disabled players are now hidden from the match list.
+
 2014/09/15
 
   * BUG: Fixed an error that was matching players with multiple opponents and
   inserting/removing a BYE player.
 
   * BUG: Dropping a player mid tournament will match their previous opponent
-  with a BYE or the player who previously had the BYE.2014/09/13
+  with a BYE or the player who previously had the BYE.
+
+2014/09/13
 
   * BUG: removed some debug code that was causing a slowdown in pairing
   generation.
